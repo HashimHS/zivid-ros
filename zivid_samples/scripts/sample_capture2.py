@@ -9,7 +9,7 @@ from rclpy.node import Node
 from rclpy.parameter import Parameter
 from sensor_msgs.msg import PointCloud2
 from std_srvs.srv import Trigger
-
+import time
 
 class Sample(Node):
 
@@ -17,8 +17,8 @@ class Sample(Node):
         super().__init__('sample_capture_py')
 
         self.capture_service = self.create_client(Trigger, 'capture')
-        while not self.capture_service.wait_for_service(timeout_sec=3.0):
-            self.get_logger().info('capture service not available, waiting again...')
+        # while not self.capture_service.wait_for_service(timeout_sec=3.0):
+        #     self.get_logger().info('capture service not available, waiting again...')
 
         self._set_settings()
 
@@ -38,9 +38,9 @@ __version__:
 Settings:
   Acquisitions:
     - Acquisition:
-        Aperture: 3
+        Aperture: 3.67
         Brightness: 1.5
-        ExposureTime: 15000
+        ExposureTime: 20000
         Gain: 1
   Diagnostics:
     Enabled: no
@@ -53,7 +53,7 @@ Settings:
         Red: 1
       Experimental:
         Mode: automatic
-      Gamma: 1
+      Gamma: 1.3
     Filters:
       Cluster:
         Removal:
@@ -107,13 +107,13 @@ Settings:
       Range: [300, 1100]
   Sampling:
     Color: rgb
-    Pixel: blueSubsample2x2
+    Pixel: blueSubsample4x4
 """,
         ).to_parameter_msg()
 
         param_client = self.create_client(SetParameters, 'zivid_camera/set_parameters')
-        while not param_client.wait_for_service(timeout_sec=3):
-            self.get_logger().info('Parameter service not available, waiting again...')
+        # while not param_client.wait_for_service(timeout_sec=3):
+        #     self.get_logger().info('Parameter service not available, waiting again...')
 
         future = param_client.call_async(
             SetParameters.Request(parameters=[settings_parameter])
@@ -121,6 +121,8 @@ Settings:
         rclpy.spin_until_future_complete(self, future, timeout_sec=30)
         if not future.result():
             raise RuntimeError('Failed to set parameters')
+
+        self.create_timer(3, self.capture)
 
     def capture(self):
         self.get_logger().info('Calling capture service')
@@ -140,10 +142,11 @@ def main(args=None):
 
         sample.get_logger().info('Spinning node.. Press Ctrl+C to abort.')
 
-        while rclpy.ok():
-            future = sample.capture()
-            rclpy.spin_until_future_complete(sample, future)
-            sample.get_logger().info('Capture complete')
+        # while rclpy.ok():
+        # sample.capture()
+        rclpy.spin(sample)
+        # rclpy.spin_until_future_complete(sample, future)
+        sample.get_logger().info('Capture complete')
 
     except KeyboardInterrupt:
         pass
